@@ -1,14 +1,34 @@
 const { v4: uuidv4 } = require("uuid");
 const agentesRepository = require("../repositories/agentesRepository");
 
-if (!agentesRepository.findById(agente_id)) {
-    return res.status(404).json({ message: "Agente não encontrado para o agente_id fornecido." });
-}
 
 function listarAgentes(req, res) {
-    const agentes = agentesRepository.findAll();
+    let agentes = agentesRepository.findAll();
+
+    const { cargo, sort } = req.query;
+
+    if (cargo) {
+        const cargoValido = ["inspetor", "delegado"];
+        if (!cargoValido.includes(cargo.toLowerCase())) {
+            return res.status(400).json({ message: "Cargo inválido. Use 'inspetor' ou 'delegado'." });
+        }
+
+        agentes = agentes.filter(agente => agente.cargo.toLowerCase() === cargo.toLowerCase());
+    }
+
+    if (sort) {
+        if (sort === "dataDeIncorporacao") {
+            agentes.sort((a, b) => new Date(a.dataDeIncorporacao) - new Date(b.dataDeIncorporacao));
+        } else if (sort === "-dataDeIncorporacao") {
+            agentes.sort((a, b) => new Date(b.dataDeIncorporacao) - new Date(a.dataDeIncorporacao));
+        } else {
+            return res.status(400).json({ message: "Parâmetro de ordenação inválido. Use 'dataDeIncorporacao' ou '-dataDeIncorporacao'." });
+        }
+    }
+
     res.status(200).json(agentes);
 }
+
 
 function buscarAgentePorId(req, res) {
     const agente = agentesRepository.findById(req.params.id);
@@ -22,8 +42,8 @@ function cadastrarAgente(req, res) {
     const { nome, dataDeIncorporacao, cargo } = req.body;
 
     if (!isValidDate(dataDeIncorporacao)) {
-    return res.status(400).json({ message: "dataDeIncorporacao inválida ou no futuro." });
-}
+        return res.status(400).json({ message: "dataDeIncorporacao inválida ou no futuro." });
+    }
 
     const novoAgente = {
         id: uuidv4(),
@@ -40,9 +60,9 @@ function atualizarAgente(req, res) {
     const { id } = req.params;
     const { nome, dataDeIncorporacao, cargo } = req.body;
 
-    if (!agentesRepository.findById(agente_id)) {
-    return res.status(404).json({ message: "Agente não encontrado para o agente_id fornecido." });
-}
+    if (!agentesRepository.findById(id)) {
+        return res.status(404).json({ message: "Agente não encontrado para o id fornecido." });
+    }
     if (!nome || !dataDeIncorporacao || !cargo) {
         return res.status(400).json({ message: "Todos os campos são obrigatórios." });
     }
@@ -60,9 +80,9 @@ function atualizarParcialAgente(req, res) {
     const { id } = req.params;
     const atualizacao = req.body;
 
-    if (!agentesRepository.findById(agente_id)) {
-    return res.status(404).json({ message: "Agente não encontrado para o agente_id fornecido." });
-}
+    if (!agentesRepository.findById(id)) {
+        return res.status(404).json({ message: "Agente não encontrado para o id fornecido." });
+    }
 
     if (Object.keys(atualizacao).length === 0) {
         return res.status(400).json({ message: "É necessário fornecer dados para atualizar." });
