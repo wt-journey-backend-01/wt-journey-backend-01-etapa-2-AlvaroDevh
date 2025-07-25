@@ -37,7 +37,7 @@ const casos = [
 ];
 
 
-function findAll() {
+function listarCasos() {
     return casos
 }
 
@@ -57,10 +57,16 @@ function deletarPorIndice(index) {
     casos.splice(index, 1);
 }
 
+function findByAgenteId(agente_id) {
+    return casos.filter(caso => caso.agente_id === agente_id);
+}
+
+
 module.exports = {
-    findAll,
+    listarCasos,
     casoID, 
     cadastrarCaso,
     findIndexById,
-    deletarPorIndice
+    deletarPorIndice,
+    findByAgenteId
 }

@@ -1,14 +1,33 @@
 const casosRepository = require("../repositories/casosRepository")
+const agentesRepository = require("../repositories/agentesRepository");
+
 const { v4: uuidv4 } = require("uuid");
 
-//GET /casos → Lista todos os casos registrados.
-function getAllCasos(req, res) {
+function listarCasos(req, res) {
+    const { status, agente_id, q } = req.query;
 
-        const casos = casosRepository.findAll()
-        res.json(casos)
+    let resultado = casosRepository.listarCasos();
+
+    if (status) {
+        resultado = resultado.filter(c => c.status.toLowerCase() === status.toLowerCase());
+    }
+
+    if (agente_id) {
+        resultado = resultado.filter(c => c.agente_id === agente_id);
+    }
+
+    if (q) {
+        const termo = q.toLowerCase();
+        resultado = resultado.filter(c =>
+            c.titulo.toLowerCase().includes(termo) ||
+            c.descricao.toLowerCase().includes(termo)
+        );
+    }
+
+    res.status(200).json(resultado);
 }
 
-//GET /casos/:id → Retorna os detalhes de um caso específico.
+
 function getCasoID(req, res) {
         const id = req.params.id;
         const caso = casosRepository.casoID(id);
@@ -19,7 +38,6 @@ function getCasoID(req, res) {
 
         res.status(200).json(caso);
 }
-//POST /casos → Cria um novo caso com os seguintes campos:
 function cadastrarCaso(req, res) {
 
         const { titulo, descricao, status, agente_id } = req.body;
@@ -43,8 +61,6 @@ function cadastrarCaso(req, res) {
         res.status(201).json(novoCaso);
 
 }
-
-//PUT /casos/:id → Atualiza os dados de um caso por completo.
 
 function editarCaso(req, res) {
     const id = req.params.id;
@@ -94,7 +110,6 @@ function atualizarParcialCaso(req, res) {
     res.status(200).json(caso);
 }
 
-
 function deletarCaso(req, res) {
     const id = req.params.id;
     const index = casosRepository.findIndexById(id);
@@ -107,14 +122,62 @@ function deletarCaso(req, res) {
     res.status(204).send(); 
 }
 
+function listarCasosPorAgente(req, res) {
+    const { agente_id } = req.query;
+
+    if (!agente_id) {
+        return res.status(400).json({ message: "O parâmetro agente_id é obrigatório." });
+    }
+
+    const casosFiltrados = casosRepository.findByAgenteId(agente_id);
+
+    res.status(200).json(casosFiltrados);
+}
+
+
+function buscarAgenteDoCaso(req, res) {
+    const { caso_id } = req.params;
+
+    const caso = casosRepository.findById(caso_id);
+    if (!caso) {
+        return res.status(404).json({ message: "Caso não encontrado." });
+    }
+
+    const agente = agentesRepository.findById(caso.agente_id);
+    if (!agente) {
+        return res.status(404).json({ message: "Agente responsável não encontrado." });
+    }
+
+    res.status(200).json(agente);
+}
  
 
+function buscarCasos(req, res) {
+    const { q } = req.query;
+
+    if (!q || q.trim() === "") {
+        return res.status(400).json({ message: "A query string 'q' é obrigatória." });
+    }
+
+    const termo = q.toLowerCase();
+    const resultado = casosRepository.listarCasos().filter(caso =>
+        caso.titulo.toLowerCase().includes(termo) ||
+        caso.descricao.toLowerCase().includes(termo)
+    );
+
+    res.status(200).json(resultado);
+}
+
+
 module.exports = {
-        getAllCasos,
+        listarCasos,
         getCasoID,
         cadastrarCaso,
         editarCaso,
         atualizarParcialCaso,
-        deletarCaso
+        deletarCaso,
+        listarCasosPorAgente,
+        buscarAgenteDoCaso,
+        buscarCasos
 }
 

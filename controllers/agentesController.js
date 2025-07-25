@@ -1,6 +1,10 @@
 const { v4: uuidv4 } = require("uuid");
 const agentesRepository = require("../repositories/agentesRepository");
 
+if (!agentesRepository.findById(agente_id)) {
+    return res.status(404).json({ message: "Agente não encontrado para o agente_id fornecido." });
+}
+
 function listarAgentes(req, res) {
     const agentes = agentesRepository.findAll();
     res.status(200).json(agentes);
@@ -17,9 +21,9 @@ function buscarAgentePorId(req, res) {
 function cadastrarAgente(req, res) {
     const { nome, dataDeIncorporacao, cargo } = req.body;
 
-    if (!nome || !dataDeIncorporacao || !cargo) {
-        return res.status(400).json({ message: "Todos os campos são obrigatórios." });
-    }
+    if (!isValidDate(dataDeIncorporacao)) {
+    return res.status(400).json({ message: "dataDeIncorporacao inválida ou no futuro." });
+}
 
     const novoAgente = {
         id: uuidv4(),
@@ -36,6 +40,9 @@ function atualizarAgente(req, res) {
     const { id } = req.params;
     const { nome, dataDeIncorporacao, cargo } = req.body;
 
+    if (!agentesRepository.findById(agente_id)) {
+    return res.status(404).json({ message: "Agente não encontrado para o agente_id fornecido." });
+}
     if (!nome || !dataDeIncorporacao || !cargo) {
         return res.status(400).json({ message: "Todos os campos são obrigatórios." });
     }
@@ -52,6 +59,10 @@ function atualizarAgente(req, res) {
 function atualizarParcialAgente(req, res) {
     const { id } = req.params;
     const atualizacao = req.body;
+
+    if (!agentesRepository.findById(agente_id)) {
+    return res.status(404).json({ message: "Agente não encontrado para o agente_id fornecido." });
+}
 
     if (Object.keys(atualizacao).length === 0) {
         return res.status(400).json({ message: "É necessário fornecer dados para atualizar." });
@@ -74,6 +85,14 @@ function removerAgente(req, res) {
     }
 
     res.status(204).send();
+}
+
+function isValidDate(dateString) {
+    const regex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!regex.test(dateString)) return false;
+    const date = new Date(dateString);
+    const now = new Date();
+    return date instanceof Date && !isNaN(date) && date <= now;
 }
 
 module.exports = {
