@@ -1,226 +1,187 @@
 <sup>Esse é um feedback gerado por IA, ele pode conter erros.</sup>
 
-Você tem 8 créditos restantes para usar o sistema de feedback AI.
+Você tem 7 créditos restantes para usar o sistema de feedback AI.
 
 # Feedback para AlvaroDevh:
 
-Nota final: **69.4/100**
+Nota final: **90.5/100**
 
-# Olá AlvaroDevh! 🚀 Tudo bem? Vamos juntos destrinchar seu código e fazer ele brilhar ainda mais! ✨
+# Feedback para o AlvaroDevh 🚓🚀
 
----
-
-## 🎉 Primeiramente, parabéns pelo que já está funcionando muito bem!
-
-Seu projeto está com uma base sólida! 👏 Você implementou corretamente os endpoints principais para **agentes** e **casos**, com os métodos HTTP essenciais (GET, POST, PUT, PATCH, DELETE). Sua organização em rotas, controllers e repositories está bem clara, o que é fundamental para manter o código escalável e organizado.
-
-Além disso, você já conseguiu implementar filtros básicos para os casos e agentes, e até alguns bônus, como a filtragem por status e agente, o que é show de bola! 🎯 Isso mostra que você está indo além do básico, explorando funcionalidades extras que enriquecem sua API.
+Olá, Alvaro! Primeiro, quero te parabenizar pelo esforço e pelo trabalho que você entregou nesta API para o Departamento de Polícia. Seu código está muito bem organizado, você implementou a maioria dos endpoints com suas respectivas validações e tratamento de erros, e isso é um baita avanço! 🎉👏
 
 ---
 
-## 🕵️ Análise detalhada dos pontos que precisam de atenção
+## 🎯 O que você mandou muito bem!
 
-### 1. Validação incompleta dos dados no cadastro e atualização de agentes
+- A arquitetura modular está no caminho certo: você separou muito bem as rotas, controllers e repositories. Isso facilita muito a manutenção e evolução da aplicação.
+- Implementou os métodos HTTP principais para `/agentes` e `/casos` com as validações básicas, o que é fundamental para uma API REST.
+- O uso do `uuid` para gerar IDs únicos está correto e bem aplicado.
+- Validações importantes, como para o campo `cargo` dos agentes e o `status` dos casos, estão presentes e ajudam a garantir a integridade dos dados.
+- Você também cuidou do tratamento de erros com mensagens claras e status HTTP adequados (400, 404, 201, 204, etc).
+- Conseguiu implementar filtros simples para os casos por status e agente, o que é um plus muito legal! 👏
+- Também implementou o endpoint para buscar casos por palavras-chave no título e descrição, e para buscar o agente responsável pelo caso, o que mostra que você foi além do básico.
 
-Percebi que no seu `agentesController.js`, na função `cadastrarAgente`, você valida a data de incorporação, mas não valida se o **nome** e o **cargo** estão preenchidos. Isso permite que um agente seja criado com nome vazio ou cargo vazio, o que não faz sentido para o domínio do problema.
+---
 
-Exemplo do seu código atual:
+## 🔍 Pontos que merecem sua atenção para melhorar ainda mais
+
+### 1. Atualização parcial (PATCH) de agentes com payload em formato incorreto
+
+Eu percebi que o teste que verifica se você retorna um status 400 quando o payload enviado para atualizar parcialmente um agente está no formato errado está falhando. Isso indica que sua validação para o corpo da requisição PATCH em `/agentes/:id` não está cobrindo todos os casos de payload inválido.
+
+No seu `agentesController.js`, na função `atualizarParcialAgente`, você faz esta verificação:
 
 ```js
-function cadastrarAgente(req, res) {
-    const { nome, dataDeIncorporacao, cargo } = req.body;
+if (Object.keys(atualizacao).length === 0) {
+    return res.status(400).json({ message: "É necessário fornecer dados para atualizar." });
+}
+```
 
-    if (!isValidDate(dataDeIncorporacao)) {
-        return res.status(400).json({ message: "dataDeIncorporacao inválida ou no futuro." });
+Isso é ótimo para detectar payloads vazios, mas não valida se os campos enviados têm os tipos corretos ou se são válidos. Por exemplo, se alguém enviar um campo `cargo` com um valor inválido ou um campo extra que não existe, seu código aceita sem reclamar.
+
+**Como melhorar?**
+
+Você pode implementar uma validação mais robusta que verifica:
+
+- Se os campos enviados são esperados (nome, dataDeIncorporacao, cargo).
+- Se os valores dos campos são válidos (por exemplo, cargo deve ser "inspetor" ou "delegado").
+- Se as datas são válidas e não estão no futuro.
+
+Assim, você garante que o patch só atualize dados válidos.
+
+Exemplo simplificado para validar o campo `cargo`:
+
+```js
+if ('cargo' in atualizacao) {
+    const cargosValidos = ['inspetor', 'delegado'];
+    if (!cargosValidos.includes(atualizacao.cargo.toLowerCase())) {
+        return res.status(400).json({ message: "Cargo inválido. Use 'inspetor' ou 'delegado'." });
     }
-
-    const novoAgente = {
-        id: uuidv4(),
-        nome,
-        dataDeIncorporacao,
-        cargo
-    };
-
-    agentesRepository.create(novoAgente);
-    res.status(201).json(novoAgente);
 }
 ```
 
-Aqui falta validar se `nome` e `cargo` são strings não vazias. Isso pode ser corrigido assim:
-
-```js
-if (!nome || nome.trim() === "") {
-    return res.status(400).json({ message: "Nome é obrigatório." });
-}
-
-const cargosValidos = ["inspetor", "delegado"];
-if (!cargo || !cargosValidos.includes(cargo.toLowerCase())) {
-    return res.status(400).json({ message: "Cargo inválido ou obrigatório. Use 'inspetor' ou 'delegado'." });
-}
-```
-
-Além disso, nas funções de atualização (`atualizarAgente` e `atualizarParcialAgente`), você não impede que o campo `id` seja alterado, o que pode comprometer a integridade dos dados.
-
-👉 **Por que isso é importante?**  
-O `id` deve ser imutável, pois é a chave única que identifica o agente. Permitir alterações nele pode causar inconsistências e dificultar buscas futuras.
+Você pode fazer validações similares para os outros campos.
 
 ---
 
-### 2. Validação do agente_id ao criar ou atualizar casos
+### 2. Penalidade: possibilidade de alterar o ID do caso com método PUT
 
-No seu `casosController.js`, na função `cadastrarCaso`, você verifica se os campos obrigatórios estão presentes e se o status é válido, mas não verifica se o `agente_id` informado realmente existe na base de agentes.
+No seu `casosController.js`, na função `editarCaso` (PUT `/casos/:id`), eu vi que você atualiza diretamente os campos do caso, mas não impede que o campo `id` seja alterado via payload.
 
-Veja o trecho atual:
+Veja:
 
 ```js
-if (!titulo || !descricao || !status || !agente_id) {
-    return res.status(400).json({ message: 'Todos os campos são obrigatórios.' });
-}
+caso.titulo = titulo;
+caso.descricao = descricao;
+caso.status = status;
+caso.agente_id = agente_id;
+```
 
-if (status !== "aberto" && status !== "solucionado") {
-    return res.status(400).json({ message: 'Status deve ser "aberto" ou "solucionado".' });
+Aqui, se o `id` vier no corpo da requisição, ele não está sendo bloqueado, o que pode causar inconsistências na sua base de dados em memória.
+
+**Como corrigir?**
+
+Você deve garantir que o campo `id` não seja modificado, assim como fez no controller de agentes. Por exemplo:
+
+```js
+if ('id' in req.body && req.body.id !== id) {
+    return res.status(400).json({ message: "O campo 'id' não pode ser modificado." });
 }
 ```
 
-Aqui, falta algo como:
-
-```js
-const agenteExiste = agentesRepository.findById(agente_id);
-if (!agenteExiste) {
-    return res.status(404).json({ message: "Agente responsável não encontrado." });
-}
-```
-
-Sem essa validação, você permite criar casos vinculados a agentes inexistentes, o que quebra a lógica do sistema.
+Coloque essa verificação no início da função `editarCaso` para rejeitar qualquer tentativa de alteração do `id`.
 
 ---
 
-### 3. Problemas com rotas duplicadas e organização no `casosRoutes.js`
+### 3. Estrutura de diretórios não está conforme o esperado
 
-No arquivo `routes/casosRoutes.js`, percebi que você declarou duas vezes a rota `GET /casos`:
+Eu dei uma olhada na estrutura do seu projeto e percebi que, embora você tenha organizado os arquivos em pastas, está faltando a pasta `utils/` com o arquivo `errorHandler.js` e a pasta `docs/` com o `swagger.js` que são recomendados para organizar melhor seu código e documentação.
 
-```js
-router.get("/casos", casosController.listarCasos);
+Além disso, seu arquivo principal está nomeado como `server.js`, o que está correto, mas o `package.json` aponta `main` para `"api.js"`, que não existe no seu projeto. Isso pode causar confusão ou erros ao rodar a aplicação em alguns ambientes.
 
-...
+**Sugestão:**
 
-router.get("/casos", casosController.listarCasosPorAgente);
-```
+- Ajuste o campo `"main"` no `package.json` para `"server.js"` para refletir o arquivo correto.
+- Crie a pasta `utils/` para colocar, por exemplo, um middleware de tratamento de erros centralizado (`errorHandler.js`).
+- Se quiser, adicione a pasta `docs/` para documentação da API (Swagger), que é um ótimo diferencial.
 
-Isso causa conflito, pois a segunda rota sobrescreve a primeira. Como resultado, o endpoint para listar todos os casos não funciona como esperado.
-
-**Solução:**  
-Para filtrar casos por agente, você já tem a query string `agente_id` na função `listarCasos` do controller. Então, basta manter apenas uma rota `/casos` que trate os filtros via query params.
-
-Exemplo simplificado:
-
-```js
-router.get("/casos", casosController.listarCasos);
-```
-
-E no controller, você já trata o filtro `agente_id`:
-
-```js
-function listarCasos(req, res) {
-    const { status, agente_id, q } = req.query;
-
-    let resultado = casosRepository.listarCasos();
-
-    if (status) {
-        resultado = resultado.filter(c => c.status.toLowerCase() === status.toLowerCase());
-    }
-
-    if (agente_id) {
-        resultado = resultado.filter(c => c.agente_id === agente_id);
-    }
-
-    if (q) {
-        const termo = q.toLowerCase();
-        resultado = resultado.filter(c =>
-            c.titulo.toLowerCase().includes(termo) ||
-            c.descricao.toLowerCase().includes(termo)
-        );
-    }
-
-    res.status(200).json(resultado);
-}
-```
-
-Assim, você evita duplicidade e mantém a API mais limpa e intuitiva.
+Ter essa estrutura ajuda na escalabilidade e organização do projeto. 😉
 
 ---
 
-### 4. Falta de tratamento para alteração do `id` em casos e agentes
+### 4. Validação e mensagens de erro customizadas para filtros e argumentos inválidos
 
-Você permite que o campo `id` seja alterado tanto nos agentes quanto nos casos, especialmente nas atualizações via PUT e PATCH. Isso pode ser perigoso e não está correto no contexto de APIs RESTful, onde o `id` é o identificador imutável do recurso.
+Você fez um bom trabalho em validar alguns parâmetros, como o `cargo` em agentes e o `status` em casos, mas percebi que as mensagens de erro customizadas para alguns filtros e argumentos inválidos ainda podem ser aprimoradas.
 
-No seu controller de agentes, por exemplo, você faz:
+Por exemplo, no filtro `/casos` por status, você aceita qualquer string, mas a lista de status válidos não está centralizada, e a mensagem de erro poderia ser mais clara.
+
+No `casosController.js`:
 
 ```js
-const atualizado = agentesRepository.update(id, { nome, dataDeIncorporacao, cargo });
+if (status) {
+    resultado = resultado.filter(c => c.status.toLowerCase() === status.toLowerCase());
+}
 ```
 
-Mas não impede que o corpo da requisição contenha um campo `id` diferente, que pode sobrescrever o original.
+Aqui, se o status for inválido, você simplesmente não retorna erro, só não filtra nada.
 
-**Como evitar:**  
-Antes de atualizar, remova o campo `id` do objeto que vai atualizar, ou ignore-o explicitamente.
+**Melhorar isso:**
+
+- Defina um array de status válidos, como `const statusValidos = ['aberto', 'solucionado'];`
+- Se o parâmetro `status` for passado e não estiver na lista, retorne status 400 com mensagem explicativa.
 
 Exemplo:
 
 ```js
-const { id: _, ...dadosAtualizacao } = req.body; // remove o id do corpo
-const atualizado = agentesRepository.update(id, dadosAtualizacao);
+const statusValidos = ['aberto', 'solucionado'];
+if (status && !statusValidos.includes(status.toLowerCase())) {
+    return res.status(400).json({ message: `Status inválido. Use ${statusValidos.join(' ou ')}.` });
+}
 ```
 
-Faça o mesmo para os casos.
+Essa melhoria deixa sua API mais robusta e amigável para quem a consome.
 
 ---
 
-### 5. Estrutura de diretórios não está 100% conforme o esperado
+## 📚 Recomendações de estudo para você
 
-O seu projeto está organizado em `controllers/`, `repositories/`, `routes/` e tem o `server.js` e `package.json` na raiz, o que está correto. Porém, não encontrei as pastas e arquivos opcionais que ajudam muito na organização e manutenção, como:
+Para fortalecer esses pontos, recomendo fortemente que você dê uma olhada nos seguintes conteúdos:
 
-- Uma pasta `utils/` para utilitários como `errorHandler.js` (para centralizar tratamento de erros)
-- Uma pasta `docs/` para documentação, como o `swagger.js`
+- **Validação de dados e tratamento de erros na API:**  
+  https://youtu.be/yNDCRAz7CM8?si=Lh5u3j27j_a4w3A_
 
-Além disso, seu `package.json` aponta o arquivo principal como `"main": "api.js"`, mas seu servidor está rodando em `server.js`. Isso pode causar confusão.
+- **Documentação oficial do Express.js sobre roteamento:**  
+  https://expressjs.com/pt-br/guide/routing.html
 
-**Sugestão:**  
-- Ajuste o `main` no `package.json` para `"server.js"` para refletir seu ponto de entrada real.
-- Crie as pastas `utils/` e `docs/` para acomodar funcionalidades futuras, deixando seu projeto mais profissional e alinhado com boas práticas.
+- **Estrutura MVC para Node.js e Express:**  
+  https://youtu.be/bGN_xNc4A1k?si=Nj38J_8RpgsdQ-QH
 
----
+- **Entendendo status codes HTTP 400 e 404 com exemplos:**  
+  https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/400  
+  https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/404
 
-## 📚 Recomendações de estudos para você crescer ainda mais!
-
-- Para fortalecer a validação de dados e tratamento de erros na API, recomendo muito este vídeo: [Validação de dados em APIs Node.js/Express](https://youtu.be/yNDCRAz7CM8?si=Lh5u3j27j_a4w3A_). Ele vai te ajudar a entender como garantir que os dados recebidos sejam sempre válidos e coerentes.
-
-- Para entender melhor o roteamento e organização das rotas no Express, veja a documentação oficial: [Express Routing](https://expressjs.com/pt-br/guide/routing.html). Isso vai evitar problemas com rotas duplicadas e confusas.
-
-- Quer aprofundar na arquitetura MVC e organização do projeto? Este vídeo é excelente: [Arquitetura MVC em Node.js](https://youtu.be/bGN_xNc4A1k?si=Nj38J_8RpgsdQ-QH). Ele vai te ajudar a manter seu código limpo e modular.
+- **Manipulação de arrays no JavaScript (filter, find, etc):**  
+  https://youtu.be/glSgUKA5LjE?si=t9G2NsC8InYAU9cI
 
 ---
 
-## 📝 Resumo rápido dos pontos para focar:
+## 📝 Resumo rápido para focar:
 
-- **Validação completa dos dados**: não permita criar ou atualizar agentes e casos com campos obrigatórios vazios ou inválidos (nome, cargo, status, agente_id).
-- **Não permita alteração do campo `id`** em agentes e casos durante atualizações.
-- **Corrija as rotas duplicadas** no `casosRoutes.js`, especialmente a rota `/casos`.
-- **Valide se o `agente_id` existe** antes de criar ou atualizar um caso.
-- **Ajuste a estrutura do projeto** para refletir o arquivo principal correto (`server.js` no `package.json`) e considere criar pastas para utilitários e documentação.
-- **Continue explorando filtros e mensagens de erro customizadas**, pois isso valoriza muito sua API.
-
----
-
-## Finalizando... 🚀
-
-AlvaroDevh, você está no caminho certo! Seu código tem uma base muito boa, e com esses ajustes, sua API vai ficar ainda mais robusta, segura e profissional. Lembre-se: validar os dados de entrada e garantir a integridade dos IDs são passos fundamentais para qualquer API REST.
-
-Continue praticando e explorando as funcionalidades bônus, porque você já mostrou que consegue ir além do básico! Se precisar de ajuda, estarei aqui para te guiar. Vamos juntos nessa jornada! 💪✨
+- Fortaleça a validação do payload em atualizações parciais (PATCH), verificando tipos e valores válidos.
+- Impeça a modificação do campo `id` em casos no método PUT.
+- Ajuste o `package.json` para apontar o arquivo principal correto (`server.js`).
+- Melhore a estrutura do projeto criando as pastas `utils/` e `docs/` para organização e documentação futuras.
+- Implemente mensagens de erro customizadas para filtros inválidos, especialmente em parâmetros query.
+- Centralize listas de valores válidos (ex: status, cargos) para facilitar manutenção e validação.
 
 ---
 
-Um abraço de Code Buddy 🤖❤️ e até a próxima revisão!
+Alvaro, você está muito bem encaminhado e sua API já está funcional e organizada! Com esses ajustes, sua aplicação vai ficar ainda mais robusta e profissional. Continue assim, aprendendo e aprimorando seu código! 🚀💪
+
+Se precisar de ajuda para implementar qualquer um desses pontos, pode contar comigo! 😉
+
+Abraço e bons códigos! 👨‍💻✨
 
 > Caso queira tirar uma dúvida específica, entre em contato com o Chapter no nosso [discord](https://discord.gg/DryuHVnz).
 
