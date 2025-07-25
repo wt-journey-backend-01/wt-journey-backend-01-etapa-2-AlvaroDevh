@@ -29,36 +29,40 @@ function listarCasos(req, res) {
 
 
 function getCasoID(req, res) {
-        const id = req.params.id;
-        const caso = casosRepository.casoID(id);
+    const id = req.params.id;
+    const caso = casosRepository.casoID(id);
 
-        if (!caso) {
-                return res.status(404).json({ message: "Caso não encontrado" });
-        }
+    if (!caso) {
+        return res.status(404).json({ message: "Caso não encontrado" });
+    }
 
-        res.status(200).json(caso);
+    res.status(200).json(caso);
 }
 function cadastrarCaso(req, res) {
 
-        const { titulo, descricao, status, agente_id } = req.body;
+    const { titulo, descricao, status, agente_id } = req.body;
 
-        if (!titulo || !descricao || !status || !agente_id) {
-                return res.status(400).json({ message: 'Todos os campos são obrigatórios.' });
-        }
+    const agenteExiste = agentesRepository.findById(agente_id);
+    if (!agenteExiste) {
+        return res.status(404).json({ message: "Agente responsável não encontrado." });
+    }
+    if (!titulo || !descricao || !status || !agente_id) {
+        return res.status(400).json({ message: 'Todos os campos são obrigatórios.' });
+    }
 
-        if (status !== "aberto" && status !== "solucionado") {
-                return res.status(400).json({ message: 'Status deve ser "aberto" ou "solucionado".' });
-        }
+    if (status !== "aberto" && status !== "solucionado") {
+        return res.status(400).json({ message: 'Status deve ser "aberto" ou "solucionado".' });
+    }
 
-        const novoCaso = {
-                id: uuidv4(),
-                titulo,
-                descricao,
-                status,
-                agente_id
-        };
-        casosRepository.cadastrarCaso(novoCaso);
-        res.status(201).json(novoCaso);
+    const novoCaso = {
+        id: uuidv4(),
+        titulo,
+        descricao,
+        status,
+        agente_id
+    };
+    casosRepository.cadastrarCaso(novoCaso);
+    res.status(201).json(novoCaso);
 
 }
 
@@ -119,7 +123,7 @@ function deletarCaso(req, res) {
     }
 
     casosRepository.deletarPorIndice(index);
-    res.status(204).send(); 
+    res.status(204).send();
 }
 
 function listarCasosPorAgente(req, res) {
@@ -150,7 +154,7 @@ function buscarAgenteDoCaso(req, res) {
 
     res.status(200).json(agente);
 }
- 
+
 
 function buscarCasos(req, res) {
     const { q } = req.query;
@@ -170,14 +174,14 @@ function buscarCasos(req, res) {
 
 
 module.exports = {
-        listarCasos,
-        getCasoID,
-        cadastrarCaso,
-        editarCaso,
-        atualizarParcialCaso,
-        deletarCaso,
-        listarCasosPorAgente,
-        buscarAgenteDoCaso,
-        buscarCasos
+    listarCasos,
+    getCasoID,
+    cadastrarCaso,
+    editarCaso,
+    atualizarParcialCaso,
+    deletarCaso,
+    listarCasosPorAgente,
+    buscarAgenteDoCaso,
+    buscarCasos
 }
 

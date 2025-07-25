@@ -45,6 +45,14 @@ function cadastrarAgente(req, res) {
         return res.status(400).json({ message: "dataDeIncorporacao inválida ou no futuro." });
     }
 
+    if (!nome || nome.trim() === "") {
+        return res.status(400).json({ message: "Nome é obrigatório." });
+    }
+
+    const cargosValidos = ["inspetor", "delegado"];
+    if (!cargo || !cargosValidos.includes(cargo.toLowerCase())) {
+        return res.status(400).json({ message: "Cargo inválido ou obrigatório. Use 'inspetor' ou 'delegado'." });
+    }
     const novoAgente = {
         id: uuidv4(),
         nome,
@@ -58,44 +66,47 @@ function cadastrarAgente(req, res) {
 
 function atualizarAgente(req, res) {
     const { id } = req.params;
-    const { nome, dataDeIncorporacao, cargo } = req.body;
+    const { nome, dataDeIncorporacao, cargo, id: idDoBody } = req.body;
+
+    if (idDoBody && idDoBody !== id) {
+        return res.status(400).json({ message: "O campo 'id' não pode ser modificado." });
+    }
 
     if (!agentesRepository.findById(id)) {
         return res.status(404).json({ message: "Agente não encontrado para o id fornecido." });
     }
+
     if (!nome || !dataDeIncorporacao || !cargo) {
         return res.status(400).json({ message: "Todos os campos são obrigatórios." });
     }
 
     const atualizado = agentesRepository.update(id, { nome, dataDeIncorporacao, cargo });
 
-    if (!atualizado) {
-        return res.status(404).json({ message: "Agente não encontrado." });
-    }
-
     res.status(200).json(atualizado);
 }
+
 
 function atualizarParcialAgente(req, res) {
     const { id } = req.params;
     const atualizacao = req.body;
 
-    if (!agentesRepository.findById(id)) {
-        return res.status(404).json({ message: "Agente não encontrado para o id fornecido." });
+    if ("id" in atualizacao) {
+        return res.status(400).json({ message: "O campo 'id' não pode ser modificado." });
     }
 
     if (Object.keys(atualizacao).length === 0) {
         return res.status(400).json({ message: "É necessário fornecer dados para atualizar." });
     }
 
-    const atualizado = agentesRepository.updatePartial(id, atualizacao);
-
-    if (!atualizado) {
+    if (!agentesRepository.findById(id)) {
         return res.status(404).json({ message: "Agente não encontrado." });
     }
 
+    const atualizado = agentesRepository.updatePartial(id, atualizacao);
+
     res.status(200).json(atualizado);
 }
+
 
 function removerAgente(req, res) {
     const removido = agentesRepository.remove(req.params.id);

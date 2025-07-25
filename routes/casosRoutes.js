@@ -16,8 +16,6 @@ router.patch('/casos/:id', casosController.atualizarParcialCaso);
 
 router.delete('/casos/:id', casosController.deletarCaso);
 
-router.get("/casos", casosController.listarCasosPorAgente);
-
 router.get("/casos/:caso_id/agente", casosController.buscarAgenteDoCaso);
 
 
